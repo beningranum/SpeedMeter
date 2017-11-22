@@ -1,15 +1,13 @@
 package fly.speedmeter.grub;
 
-import android.content.BroadcastReceiver;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.Preference;
-import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
-import android.support.v4.app.NavUtils;
 import android.support.v7.app.ActionBarActivity;
 import android.view.MenuItem;
+
+import java.util.Locale;
 
 /**
  * Created by fly on 19/04/15.
@@ -65,7 +63,7 @@ public class Settings extends ActionBarActivity {
 
         private void updatePreference(Preference preference) {
             if (preference.getKey().equals("version")) {
-                preference.setSummary(String.format("v%s (%d)", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
+                preference.setSummary(String.format(Locale.US, "v%s (%d)", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
             }
         }
 
