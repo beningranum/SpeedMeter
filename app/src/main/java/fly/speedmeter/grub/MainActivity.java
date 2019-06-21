@@ -11,6 +11,7 @@ import android.location.LocationManager;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
+import android.text.TextUtils;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.text.SpannableString;
@@ -49,7 +50,7 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     private TextView averageSpeed;
     private TextView distance;
     private Chronometer time;
-    private Data.onGpsServiceUpdate onGpsServiceUpdate;
+    private Data.OnGpsServiceUpdate onGpsServiceUpdate;
 
     private boolean firstfix;
 
@@ -71,7 +72,7 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
         refresh = (FloatingActionButton) findViewById(R.id.refresh);
         refresh.setVisibility(View.INVISIBLE);
 
-        onGpsServiceUpdate = new Data.onGpsServiceUpdate() {
+        onGpsServiceUpdate = new Data.OnGpsServiceUpdate() {
             @Override
             public void update() {
                 double maxSpeedTemp = data.getMaxSpeed();
@@ -101,16 +102,16 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
                     }
                 }
 
-                SpannableString s = new SpannableString(String.format("%.0f", maxSpeedTemp) + speedUnits);
-                s.setSpan(new RelativeSizeSpan(0.5f), s.length() - 4, s.length(), 0);
+                SpannableString s = new SpannableString(String.format("%.0f %s", maxSpeedTemp, speedUnits));
+                s.setSpan(new RelativeSizeSpan(0.5f), s.length() - speedUnits.length() - 1, s.length(), 0);
                 maxSpeed.setText(s);
 
-                s = new SpannableString(String.format("%.0f", averageTemp) + speedUnits);
-                s.setSpan(new RelativeSizeSpan(0.5f), s.length() - 4, s.length(), 0);
+                s = new SpannableString(String.format("%.0f %s", averageTemp, speedUnits));
+                s.setSpan(new RelativeSizeSpan(0.5f), s.length() - speedUnits.length() - 1, s.length(), 0);
                 averageSpeed.setText(s);
 
-                s = new SpannableString(String.format("%.3f", distanceTemp) + distanceUnits);
-                s.setSpan(new RelativeSizeSpan(0.5f), s.length() - 2, s.length(), 0);
+                s = new SpannableString(String.format("%.3f %s", distanceTemp, distanceUnits));
+                s.setSpan(new RelativeSizeSpan(0.5f), s.length() - distanceUnits.length() - 1, s.length(), 0);
                 distance.setText(s);
             }
         };
@@ -261,14 +262,22 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     @Override
     public void onLocationChanged(Location location) {
         if (location.hasAccuracy()) {
-            SpannableString s = new SpannableString(String.format("%.0f", location.getAccuracy()) + "m");
-            s.setSpan(new RelativeSizeSpan(0.75f), s.length()-1, s.length(), 0);
+            double acc = location.getAccuracy();
+            String units;
+            if (sharedPreferences.getBoolean("miles_per_hour", false)) {
+                units = "ft";
+                acc *= 3.28084;
+            } else {
+                units = "m";
+            }
+            SpannableString s = new SpannableString(String.format("%.0f %s", acc, units));
+            s.setSpan(new RelativeSizeSpan(0.75f), s.length()-units.length()-1, s.length(), 0);
             accuracy.setText(s);
 
             if (firstfix){
                 status.setText("");
                 fab.setVisibility(View.VISIBLE);
-                if (!data.isRunning() && !maxSpeed.getText().equals("")) {
+                if (!data.isRunning() && !TextUtils.isEmpty(maxSpeed.getText())) {
                     refresh.setVisibility(View.VISIBLE);
                 }
                 firstfix = false;
@@ -279,18 +288,22 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
 
         if (location.hasSpeed()) {
             progressBarCircularIndeterminate.setVisibility(View.GONE);
-            String speed = String.format(Locale.ENGLISH, "%.0f", location.getSpeed() * 3.6) + "km/h";
-
+            double speed = location.getSpeed() * 3.6;
+            String units;
             if (sharedPreferences.getBoolean("miles_per_hour", false)) { // Convert to MPH
-                speed = String.format(Locale.ENGLISH, "%.0f", location.getSpeed() * 3.6 * 0.62137119) + "mi/h";
+                speed *= 0.62137119;
+                units = "mi/h";
+            } else {
+                units = "km/h";
             }
-            SpannableString s = new SpannableString(speed);
-            s.setSpan(new RelativeSizeSpan(0.25f), s.length()-4, s.length(), 0);
+            SpannableString s = new SpannableString(String.format(Locale.ENGLISH, "%.0f %s", speed, units));
+            s.setSpan(new RelativeSizeSpan(0.25f), s.length()-units.length()-1, s.length(), 0);
             currentSpeed.setText(s);
         }
 
     }
 
+    @Override
     public void onGpsStatusChanged (int event) {
         switch (event) {
             case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
@@ -355,6 +368,7 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
         return data;
     }
 
+    @Override
     public void onBackPressed(){
         Intent a = new Intent(Intent.ACTION_MAIN);
         a.addCategory(Intent.CATEGORY_HOME);
